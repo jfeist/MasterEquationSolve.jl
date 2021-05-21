@@ -100,8 +100,6 @@ function mesolve_qutip(infile,outdir;backend=:CUDA,saveddata=:probabilities)
 
     println("writing output for propagation defined in '$infile' to directory '$outdir/'")
 
-    # intnorm(u,t) = sqrt(real(sum(abs2,u))/length(u))
-
     prob = ODEProblem(L!,ρ0,tspan,ps)
     sol = solve(prob,Tsit5(),save_start=false,save_end=false,save_everystep=false,
                 callback=cb,reltol=1e-9,abstol=1e-9,maxiters=1e18)
