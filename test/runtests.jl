@@ -1,5 +1,6 @@
 using MasterEquationSolve
-using MasterEquationSolve: qt, qobj_to_jl, mesolve
+using MasterEquationSolve: qt, qobj_to_jl, mesolve, mesolve_qutip
+using Printf
 using Test
 
 # make the destroy operators in a tensor product space of dimensions dims
@@ -32,7 +33,11 @@ end
     makedeph(σ) = sqrt(γdephasing)*(2*σ.dag()*σ-1)
     c_ops = [sqrt(γc)*acav, makedeph.(σs)...];
     e_ops = [σs[1].dag()*σs[1], acav.dag()*acav]
-    ψ0 = qt.tensor([qt.basis.(fill(2,Nmol),1); qt.basis(Nc)]);
+    ψ0 = qt.tensor([qt.basis(Nc); qt.basis.(fill(2,Nmol),1)])
+
+    infile = "mesolve_runtests_in"
+    outdir = "mesolve_runtests_out"
+    qt.qsave((H0,c_ops,ψ0,ts),infile)
 
     sol_qt = qt.mesolve(H0,ψ0,ts,c_ops,options=qt.Options(atol=1e-12,rtol=1e-10))
     sol_qt_e = qt.mesolve(H0,ψ0,ts,c_ops,e_ops=e_ops,options=qt.Options(atol=1e-12,rtol=1e-10))
@@ -43,10 +48,27 @@ end
     e_ops_j = qobj_to_jl.(e_ops)
 
     for backend = (:CPU,:CUDA)
-        sol, sv = mesolve(H,J,ρ0,ts;backend=backend,saveddata=:full);
+        sol, sv = mesolve(H,J,ρ0,ts;backend=backend,saveddata=:full)
         @test all([s ≈ q.full() for (s,q) in zip(sv.saveval,sol_qt.states)])
 
-        sol, sv = mesolve(H,J,ρ0,ts;backend=backend,saveddata=e_ops_j);
+        sol, sv = mesolve(H,J,ρ0,ts;backend=backend,saveddata=e_ops_j)
         @test reduce(hcat,sol_qt_e.expect) ≈ transpose(reduce(hcat,sv.saveval))
+
+        rm(outdir,force=true,recursive=true)
+        sol, sv = mesolve_qutip(infile,outdir; backend=backend,saveddata=:full)
+        @test all([s ≈ q.full() for (s,q) in zip(sv.saveval,sol_qt.states)])
+        sv2 = [qt.qload(@sprintf("%s/%08d",outdir,i)) for i in 1:length(ts)]
+        @test ts == [s[1] for s in sv2]
+        @test all([s[2] ≈ q.full() for (s,q) in zip(sv2,sol_qt.states)])
+
+        rm(outdir,force=true,recursive=true)
+        sol, sv = mesolve_qutip(infile,outdir; backend=backend,saveddata=e_ops_j)
+        @test reduce(hcat,sol_qt_e.expect) ≈ transpose(reduce(hcat,sv.saveval))
+        sv2 = [qt.qload(@sprintf("%s/%08d",outdir,i)) for i in 1:length(ts)]
+        @test ts == [s[1] for s in sv2]
+        @test reduce(hcat,sol_qt_e.expect) ≈ transpose(reduce(hcat,[s[2] for s in sv2]))
     end
+
+    rm(outdir,force=true,recursive=true)
+    rm(infile*".qu",force=true)
 end
