@@ -19,29 +19,32 @@ function (f::qutip_saver)(u,t,integrator)
     data
 end
 
-function get_savingcallback(saveat, saveddata=:probabilities, write_qutip=true, outdir="")
+function get_savingcallback(saveat, saveddata=:probabilities, outdir=nothing)
     if saveddata == :probabilities
         savefunc = (u,t,integrator) -> collect(real(diag(u)))
         sv = SavedValues(Float64,Vector{Float64})
     elseif saveddata == :full
-        savefunc = (u,t,integrator) -> u
+        savefunc = (u,t,integrator) -> collect(u) # collect to get a copy
         sv = SavedValues(Float64,Matrix{ComplexF64})
+    elseif saveddata isa AbstractVector # e_ops
+        savefunc = (u,t,integrator) -> ComplexF64[tr(e*u) for e in saveddata]
+        sv = SavedValues(Float64,Vector{ComplexF64})
     else
         raise(ArgumentError("No function implemented for saveddata: $saveddata."))
     end
 
-    if write_qutip
+    if outdir === nothing
+        saver = savefunc
+    else
         mkdir(outdir)
         saver = qutip_saver(savefunc,outdir)
-    else
-        saver = savefunc
     end
 
     SavingCallback(saver, sv, saveat=saveat)
 end
 
 
-function setup(H,J,ρ0,ts; backend, assume_herm=false)
+function setup(H,J,ρ0,ts,saveddata; backend, assume_herm=false)
     miHeff = get_miHeff(H,J)
     Lrefill = sum(kron.(conj.(J),J))
     if backend == :CUDA
@@ -51,27 +54,33 @@ function setup(H,J,ρ0,ts; backend, assume_herm=false)
         tmpρc = copy(ρc)
         tmpρc2 = copy(ρc)
         ps = (miHeffc,Lrefillc,tmpρc,tmpρc2,Val(assume_herm))
-        return ρc, ts, ps
+        if saveddata isa AbstractVector
+            saveddata = CuSparseMatrixCSR.(saveddata)
+        end
+        return ρc, ts, ps, saveddata
     elseif backend == :CPU
         tmpρ = copy(ρ0)
         ps = (miHeff,Lrefill,tmpρ,tmpρ,Val(assume_herm))
-        return ρ0, ts, ps
+        return ρ0, ts, ps, saveddata
     else
         raise(ArgumentError("Unknown backend $backend."))
     end
 end
 
-function mesolve_qutip(infile,outdir;backend=:CUDA,saveddata=:probabilities)
-    input = load_input_from_qutip(infile)
-    (ρ0,ts,ps) = setup(input...; backend=backend)
+function mesolve(H,J,ρ0,ts;backend=:CUDA,saveddata=:probabilities,outdir=nothing)
+    (ρ0,ts,ps,saveddata) = setup(H,J,ρ0,ts,saveddata; backend=backend)
     tspan = (ts[1],ts[end])
-    cb = get_savingcallback(ts, saveddata, true, outdir)
+    cb = get_savingcallback(ts, saveddata, outdir)
     sv = cb.affect!.saved_values
-
-    println("writing output for propagation defined in '$infile' to directory '$outdir/'")
 
     prob = ODEProblem(L!,ρ0,tspan,ps)
     sol = solve(prob,Tsit5(),save_start=false,save_end=false,save_everystep=false,
-                callback=cb,reltol=1e-9,abstol=1e-9,maxiters=1e18)
+                callback=cb,reltol=1e-10,abstol=1e-12,maxiters=1e18)
     sol, sv
+end
+
+function mesolve_qutip(infile,outdir;backend=:CUDA,saveddata=:probabilities)
+    input = load_input_from_qutip(infile)
+    println("writing output for propagation defined in '$infile' to directory '$outdir/'")
+    mesolve(input...;backend=backend,saveddata=saveddata,outdir=outdir)
 end
