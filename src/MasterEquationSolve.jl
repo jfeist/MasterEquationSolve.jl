@@ -7,6 +7,7 @@ function __init__()
 end
 
 include("qutip_interface.jl")
+include("liouvillian.jl")
 include("mesolve.jl")
 include("main.jl")
 
