@@ -18,10 +18,33 @@ function qobj_to_jl(A,getρ=false)
     end
 end
 
+function myqload(file,silent=true)
+    # redirect python stdout to avoid "Loaded tuple object." message from qload
+    if silent
+        tmp = nothing # because of scoping rules, tmp has to be defined before assignment
+        @pywith pyimport("contextlib").redirect_stdout(nothing) begin
+            tmp = qt.qload(file)
+        end
+        tmp
+    else
+        qt.qload(file)
+    end
+end
+
+
 function load_input_from_qutip(filename)
-    H_q, c_ops_q, ρ0_q, ts = qt.qload(filename)
+    data = myqload(filename)
+    if length(data) == 4
+        H_q, c_ops_q, ρ0_q, ts = data
+        saveddata = :probabilities
+    elseif length(data) == 5
+        H_q, c_ops_q, ρ0_q, ts, e_ops_q = data
+        saveddata = e_ops_q isa String ? Symbol(e_ops_q) : qobj_to_jl.(e_ops_q)
+    else
+        raise(ValueError("length(data) must be 4 or 5, got length(data) = $(length(data))."))
+    end
     H = qobj_to_jl(H_q)
     J = qobj_to_jl.(c_ops_q)
     ρ0 = qobj_to_jl(ρ0_q,true)
-    (H,J,ρ0,ts)
+    (H,J,ρ0,ts), saveddata
 end

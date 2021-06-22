@@ -79,8 +79,9 @@ function mesolve(H,J,ρ0,ts;backend=:CUDA,saveddata=:probabilities,outdir=nothin
     sol, sv
 end
 
-function mesolve_qutip(infile,outdir;backend=:CUDA,saveddata=:probabilities)
-    input = load_input_from_qutip(infile)
+function mesolve_qutip(infile,outdir;backend=:CUDA,saveddata=nothing)
+    input, saveddata_qu = load_input_from_qutip(infile)
+    saveddata = saveddata === nothing ? saveddata_qu : saveddata
     println("writing output for propagation defined in '$infile' to directory '$outdir/'")
     mesolve(input...;backend=backend,saveddata=saveddata,outdir=outdir)
 end

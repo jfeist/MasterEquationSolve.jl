@@ -1,5 +1,5 @@
 using MasterEquationSolve
-using MasterEquationSolve: qt, qobj_to_jl, mesolve, mesolve_qutip
+using MasterEquationSolve: qt, qobj_to_jl, mesolve, mesolve_qutip, myqload
 using Printf
 using Test
 
@@ -37,7 +37,7 @@ end
 
     infile = "mesolve_runtests_in"
     outdir = "mesolve_runtests_out"
-    qt.qsave((H0,c_ops,ψ0,ts),infile)
+    qt.qsave((H0,c_ops,ψ0,ts,e_ops),infile)
 
     sol_qt = qt.mesolve(H0,ψ0,ts,c_ops,options=qt.Options(atol=1e-12,rtol=1e-10))
     sol_qt_e = qt.mesolve(H0,ψ0,ts,c_ops,e_ops=e_ops,options=qt.Options(atol=1e-12,rtol=1e-10))
@@ -57,14 +57,15 @@ end
         rm(outdir,force=true,recursive=true)
         sol, sv = mesolve_qutip(infile,outdir; backend=backend,saveddata=:full)
         @test all([s ≈ q.full() for (s,q) in zip(sv.saveval,sol_qt.states)])
-        sv2 = [qt.qload(@sprintf("%s/%08d",outdir,i)) for i in 1:length(ts)]
+        sv2 = [myqload(@sprintf("%s/%08d",outdir,i)) for i in 1:length(ts)]
         @test ts == [s[1] for s in sv2]
         @test all([s[2] ≈ q.full() for (s,q) in zip(sv2,sol_qt.states)])
 
         rm(outdir,force=true,recursive=true)
-        sol, sv = mesolve_qutip(infile,outdir; backend=backend,saveddata=e_ops_j)
+        # not passing saveddata corresponds to taking it from the saved qutip file
+        sol, sv = mesolve_qutip(infile,outdir; backend=backend)
         @test reduce(hcat,sol_qt_e.expect) ≈ transpose(reduce(hcat,sv.saveval))
-        sv2 = [qt.qload(@sprintf("%s/%08d",outdir,i)) for i in 1:length(ts)]
+        sv2 = [myqload(@sprintf("%s/%08d",outdir,i)) for i in 1:length(ts)]
         @test ts == [s[1] for s in sv2]
         @test reduce(hcat,sol_qt_e.expect) ≈ transpose(reduce(hcat,[s[2] for s in sv2]))
     end
