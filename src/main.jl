@@ -12,5 +12,5 @@ function real_main()
     # TODO: "real" argument handling
     infile = ARGS[1]
     outdir = ARGS[2]
-    mesolve_qutip(infile, outdir; backend=:CUDA, saveddata=:probabilities)
+    mesolve_qutip(infile, outdir; backend=:CUDA)
 end
