@@ -59,7 +59,7 @@ function group_ops(Hs,cdc_ops)
     return Hs_new, filter(istuple,cdc_ops)
 end
 
-function mcsolve(Hs, c_ops, psi0, ts, e_ops; ntrajs=1, rtol=1e-10, atol=1e-10, dt=nothing, verbose=false)
+function mcsolve(Hs, c_ops, psi0, ts, e_ops; ntrajs=1, verbose=false, alg=Tsit5(), kwargs...)
     # MCWF solver for a single psi0. If you want to propagate an initial state that is
     # rho0 = \sum_i p_i psi_i * psi_i ^dag you just need to run this wavefunction and sum all results * p_i
     # H0 is the time independent Hamiltonian
@@ -70,10 +70,6 @@ function mcsolve(Hs, c_ops, psi0, ts, e_ops; ntrajs=1, rtol=1e-10, atol=1e-10, d
     # psi0 is the initial wavefunction
     # ts is an array of times for the propagation
     # e_ops is a list of operators to perform expectation values
-    # println("-"^100); println("Starting a time-dependent MCWF Lindblad equation")
-    if dt === nothing
-        dt = ts[2]-ts[1]
-    end
 
     results_all = zeros(ComplexF64,length(e_ops),length(ts))
     results = copy(results_all)
@@ -118,13 +114,11 @@ function mcsolve(Hs, c_ops, psi0, ts, e_ops; ntrajs=1, rtol=1e-10, atol=1e-10, d
         cb2 = get_callback(ts,results,e_ops,temp)
         cb = CallbackSet(cb1,cb2);
         t2 = time()
-        sol = solve(prob, Tsit5(), save_start=false, save_end=false, save_everystep=false,
-                    callback=cb, reltol=rtol, abstol=atol, maxiters=1e18, dt=dt)
+        sol = solve(prob, alg; save_start=false, save_end=false, save_everystep=false, callback=cb, maxiters=1e18, kwargs...)
         results_all .+= results
         if verbose
             println("Performing : ", itraj, " , out of ntrajs: ", ntrajs , "  Time for traj  : ", time()-t1, " time for setup : ",t2-t1)
         end
     end
-    # println("-"^100)
-    return results_all.*(1.0/ntrajs)
+    return results_all .* inv(ntrajs)
 end
