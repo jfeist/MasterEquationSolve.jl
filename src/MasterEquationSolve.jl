@@ -9,6 +9,7 @@ end
 include("qutip_interface.jl")
 include("liouvillian.jl")
 include("mesolve.jl")
+include("mcsolve.jl")
 include("main.jl")
 
 end
