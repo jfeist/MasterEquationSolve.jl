@@ -41,9 +41,23 @@ collapse_prob(psi,c::Tuple,t,temp) = collapse_prob(psi, c[1], t, temp, c[2](t))
 get_c(c) = c
 get_c(c::Tuple) = c[1]
 
+to_cpu(c::CuSparseMatrixCSR) = SparseArrays.SparseMatrixCSC(c.dims...,collect.((c.rowPtr,c.colVal,c.nzVal))...) |> transpose
+
 get_cdc_op(c) = c'c
-get_cdc_op(c::CuSparseMatrixCSR) = SparseArrays.SparseMatrixCSC(c.dims...,collect.((c.rowPtr,c.colVal,c.nzVal))...) |> transpose |> get_cdc_op |> CuSparseMatrixCSR
+get_cdc_op(c::CuSparseMatrixCSR) = c |> to_cpu |> get_cdc_op |> CuSparseMatrixCSR
 get_cdc_op(c::Tuple{T,U}) where {T,U} = (get_cdc_op(c[1]), c[2])
+
+get_Heff(Hs_ti,cs_ti) = sum(Hs_ti) - 0.5im * sum(cs_ti)
+get_Heff(Hs_ti::NTuple{N,CuSparseMatrixCSR},cs_ti::NTuple{M,CuSparseMatrixCSR}) where {N,M} = get_Heff(to_cpu.(Hs_ti),to_cpu.(cs_ti)) |> CuSparseMatrixCSR
+
+istuple(x) = x isa Tuple
+function group_ops(Hs,cdc_ops)
+    # collect all time-independent operators into a single one:
+    # Heff = sum_n H_{ti,n} - 0.5i sum_m c_{ti,m}^† c_{ti,m}
+    Heff = get_Heff(filter(!istuple,Hs),filter(!istuple,cdc_ops))
+    Hs_new = (Heff, filter(istuple,Hs)...)
+    return Hs_new, filter(istuple,cdc_ops)
+end
 
 function mcsolve(Hs, c_ops, psi0, ts, e_ops; ntrajs=1, rtol=1e-10, atol=1e-10, dt=nothing, verbose=false)
     # MCWF solver for a single psi0. If you want to propagate an initial state that is
@@ -65,7 +79,7 @@ function mcsolve(Hs, c_ops, psi0, ts, e_ops; ntrajs=1, rtol=1e-10, atol=1e-10, d
     results = copy(results_all)
     temp = copy(psi0)
     cdc_ops = get_cdc_op.(c_ops)
-    ps = (Hs, cdc_ops)
+    ps = group_ops(Hs, cdc_ops)
 
     deltap = rand()
 
