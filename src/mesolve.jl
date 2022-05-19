@@ -36,7 +36,9 @@ function get_savingcallback(saveat, saveddata=:probabilities, outdir=nothing)
     if outdir === nothing
         saver = savefunc
     else
-        mkdir(outdir)
+        if outdir != "."
+            mkdir(outdir)
+        end
         saver = qutip_saver(savefunc,outdir)
     end
 
