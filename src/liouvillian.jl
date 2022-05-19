@@ -48,7 +48,7 @@ function mulacc!(C,A,B,tmp)
     mul!(C,A,B,1,1)
 end
 # if B is CuSparseMatrixCSR or its adjoint, calculate tmp = B'*A', and then C += tmp'
-function mulacc!(C,A,B::U,tmp) where U <: Union{CuSparseMatrixCSR{T},Adjoint{T,CuSparseMatrixCSR{T}}} where T
+function mulacc!(C,A,B::U,tmp) where U <: Union{CuSparseMatrixCSR{T},Adjoint{T,<:CuSparseMatrixCSR{T}}} where T
     mul!(tmp,B',A')
     CUBLAS.geam!('N','C',1,C,1,tmp,C)
 end
