@@ -48,3 +48,16 @@ function load_input_from_qutip(filename)
     ρ0 = qobj_to_jl(ρ0_q,true)
     (H,J,ρ0,ts), saveddata
 end
+
+function load_se_input_from_qutip(filename)
+    data = myqload(filename)
+    if length(data)==4
+        H_q, ψ0_q, ts, e_ops_q = data
+        saveddata = e_ops_q isa String ? Symbol(e_ops_q) : qobj_to_jl.(e_ops_q)
+    else
+        throw(ValueError("Expected 4 objects in qutip input file $filename, got $(length(data))."))
+    end
+    H = qobj_to_jl(H_q)
+    ψ0 = qobj_to_jl(ψ0_q)
+    (H,ψ0,ts), saveddata
+end

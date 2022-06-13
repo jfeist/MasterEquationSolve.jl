@@ -20,7 +20,7 @@ module load julia/1.7
 
 echo "$(date '+%Y-%m-%d %H:%M:%S'): running mesolve_julia"
 
-julia --project="{MESOLVE_DIR}" -J "{MESOLVE_DIR}/mesolve_sysimage_julia17.so" -e "using MasterEquationSolve: julia_main; julia_main()" "input" "."
+julia --project="{MESOLVE_DIR}" -J "{MESOLVE_DIR}/mesolve_sysimage_julia17.so" -e 'using MasterEquationSolve; mesolve_qutip("input",".")'
 
 echo "$(date '+%Y-%m-%d %H:%M:%S'): finished"
 """
