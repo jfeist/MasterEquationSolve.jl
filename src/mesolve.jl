@@ -46,7 +46,7 @@ function get_savingcallback_se(saveat, saveddata=:probabilities, outdir=nothing)
         savefunc = (u,t,integrator) -> collect(u) # collect to get a copy
         sv = SavedValues(Float64,Vector{ComplexF64})
     elseif saveddata isa AbstractVector # e_ops
-        savefunc = (u,t,integrator) -> ComplexF64[dot(u,e,u) for e in saveddata]
+        savefunc = (u,t,integrator) -> ComplexF64[dot(u,e*u) for e in saveddata]
         sv = SavedValues(Float64,Vector{ComplexF64})
     else
         throw(ArgumentError("No function implemented for saveddata: $saveddata."))
