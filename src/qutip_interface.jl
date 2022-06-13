@@ -41,7 +41,7 @@ function load_input_from_qutip(filename)
         H_q, c_ops_q, ρ0_q, ts, e_ops_q = data
         saveddata = e_ops_q isa String ? Symbol(e_ops_q) : qobj_to_jl.(e_ops_q)
     else
-        raise(ValueError("length(data) must be 4 or 5, got length(data) = $(length(data))."))
+        throw(ValueError("length(data) must be 4 or 5, got length(data) = $(length(data))."))
     end
     H = qobj_to_jl(H_q)
     J = qobj_to_jl.(c_ops_q)

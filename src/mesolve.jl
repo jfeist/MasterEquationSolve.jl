@@ -30,7 +30,7 @@ function get_savingcallback(saveat, saveddata=:probabilities, outdir=nothing)
         savefunc = (u,t,integrator) -> ComplexF64[tr(e*u) for e in saveddata]
         sv = SavedValues(Float64,Vector{ComplexF64})
     else
-        raise(ArgumentError("No function implemented for saveddata: $saveddata."))
+        throw(ArgumentError("No function implemented for saveddata: $saveddata."))
     end
 
     if outdir === nothing
@@ -65,7 +65,7 @@ function setup(H,J,ρ0,ts,saveddata; backend, assume_herm=false)
         ps = (miHeff,Lrefill,tmpρ,tmpρ,Val(assume_herm))
         return ρ0, ts, ps, saveddata
     else
-        raise(ArgumentError("Unknown backend $backend."))
+        throw(ArgumentError("Unknown backend $backend."))
     end
 end
 
