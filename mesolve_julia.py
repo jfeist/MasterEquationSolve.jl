@@ -16,11 +16,11 @@ JOBFILE_STR = f"""\
 #SBATCH -n 3
 #SBATCH -N 1
 
-module load julia/1.7
+module load julia/1.8
 
 echo "$(date '+%Y-%m-%d %H:%M:%S'): running {{solvefun}}_julia"
 
-julia --project="{MESOLVE_DIR}" -J "{MESOLVE_DIR}/mesolve_sysimage_julia17.so" -e 'using MasterEquationSolve; {{solvefun}}_qutip("input",".")'
+julia --project="{MESOLVE_DIR}" -J "{MESOLVE_DIR}/mesolve_sysimage_julia18.so" -e 'using MasterEquationSolve; {{solvefun}}_qutip("input",".")'
 
 echo "$(date '+%Y-%m-%d %H:%M:%S'): finished"
 """
