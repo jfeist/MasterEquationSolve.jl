@@ -80,7 +80,7 @@ function setup(H,J,ρ0,ts,saveddata; backend, assume_herm=false)
     end
 end
 
-function mesolve(H,J,ρ0,ts;backend=:CUDA,saveddata=:probabilities,outdir=nothing)
+function mesolve(H, J, ρ0, ts; backend=:CUDA, saveddata=:probabilities, outdir=nothing, reltol=1e-10, abstol=1e-12)
     (ρ0,ts,ps,saveddata) = setup(H,J,ρ0,ts,saveddata; backend=backend)
     tspan = (ts[1],ts[end])
     cb = get_savingcallback(ts, saveddata, outdir)
@@ -88,15 +88,16 @@ function mesolve(H,J,ρ0,ts;backend=:CUDA,saveddata=:probabilities,outdir=nothin
 
     prob = ODEProblem(L!,ρ0,tspan,ps)
     sol = solve(prob,Tsit5(),save_start=false,save_end=false,save_everystep=false,
-                callback=cb,reltol=1e-10,abstol=1e-12,maxiters=1e18)
+                callback=cb,reltol=reltol,abstol=abstol,maxiters=1e18)
     sol, sv
 end
 
-function mesolve_qutip(infile,outdir;backend=:CUDA,saveddata=nothing)
-    input, saveddata_qu = load_input_from_qutip(infile)
+function mesolve_qutip(infile, outdir; backend=:CUDA, saveddata=nothing)
+    input, saveddata_qu, reltol, abstol = load_input_from_qutip(infile)
     saveddata = saveddata === nothing ? saveddata_qu : saveddata
     println("writing output for propagation defined in '$infile' to directory '$outdir/'")
-    mesolve(input...;backend=backend,saveddata=saveddata,outdir=outdir)
+    # use that keyword argument names are inferred, i.e., f(; a) = f(; a=a)
+    mesolve(input...; backend, saveddata, outdir, reltol, abstol)
 end
 
 miH!(miHψ,ψ,miH,t) = mul!(miHψ,miH,ψ)

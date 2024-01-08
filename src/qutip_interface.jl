@@ -31,22 +31,22 @@ function myqload(file,silent=true)
     end
 end
 
-
 function load_input_from_qutip(filename)
     data = myqload(filename)
-    if length(data) == 4
-        H_q, c_ops_q, ρ0_q, ts = data
-        saveddata = :probabilities
-    elseif length(data) == 5
-        H_q, c_ops_q, ρ0_q, ts, e_ops_q = data
-        saveddata = e_ops_q isa String ? Symbol(e_ops_q) : qobj_to_jl.(e_ops_q)
-    else
-        throw(ValueError("length(data) must be 4 or 5, got length(data) = $(length(data))."))
-    end
+    H_q = pop!(data,"H")
+    c_ops_q = pop!(data,"c_ops")
+    ρ0_q = pop!(data,"ρ0")
+    ts = pop!(data,"ts")
+    e_ops_q = pop!(data,"e_ops")
+    reltol = pop!(data,"reltol",1e-10)
+    abstol = pop!(data,"abstol",1e-12)
+    @assert isempty(data)
+
+    saveddata = e_ops_q isa String ? Symbol(e_ops_q) : qobj_to_jl.(e_ops_q)
     H = qobj_to_jl(H_q)
     J = qobj_to_jl.(c_ops_q)
     ρ0 = qobj_to_jl(ρ0_q,true)
-    (H,J,ρ0,ts), saveddata
+    (H,J,ρ0,ts), saveddata, reltol, abstol
 end
 
 function load_se_input_from_qutip(filename)

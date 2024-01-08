@@ -59,7 +59,7 @@ class mesolve_julia:
     value of e_ops (i.e., the name does not change even if full density matrices
     or expectation values are saved).
     """
-    def __init__(self, H_or_dir, ρ0=None, ts=None, c_ops=None, e_ops="probabilities"):
+    def __init__(self, H_or_dir, ρ0=None, ts=None, c_ops=None, e_ops="probabilities", **kwargs):
         if isinstance(H_or_dir,str) or isinstance(H_or_dir,Path):
             dir = Path(H_or_dir)
             self.dir = dir if dir.name.startswith("mesolve_julia_") else Path("mesolve_julia_"+str(dir))
@@ -71,7 +71,7 @@ class mesolve_julia:
         elif isinstance(H_or_dir,Qobj):
             if ρ0 is None or ts is None or c_ops is None:
                 raise ValueError(f"H_or_dir is a Qobj, but one of ρ0, ts, c_ops is None. They must have a value. Got ρ0 = {ρ0}, ts = {ts}, c_ops = {c_ops}.")
-            self.data = (H_or_dir,c_ops,ρ0,ts,e_ops)
+            self.data = dict(H=H_or_dir, c_ops=c_ops, ρ0=ρ0, ts=ts, e_ops=e_ops, **kwargs)
             self.dir = Path(mkdtemp(prefix="mesolve_julia_",dir="."))
             qsave(self.data, str(self.dir/"input"))
             (self.dir/JOBFILE).write_text(JOBFILE_STR.format(solvefun="mesolve"))

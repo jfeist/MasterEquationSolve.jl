@@ -37,7 +37,7 @@ end
 
     infile = "mesolve_runtests_in"
     outdir = "mesolve_runtests_out"
-    qt.qsave((H0,c_ops,ψ0,ts,e_ops),infile)
+    qt.qsave(Dict("H"=>H0, "c_ops"=>c_ops, "ρ0"=>ψ0, "ts"=>ts, "e_ops"=>e_ops, "abstol"=>1e-12, "reltol"=>1e-10),infile)
 
     sol_qt = qt.mesolve(H0,ψ0,ts,c_ops,options=qt.Options(atol=1e-12,rtol=1e-10))
     sol_qt_e = qt.mesolve(H0,ψ0,ts,c_ops,e_ops=e_ops,options=qt.Options(atol=1e-12,rtol=1e-10))
@@ -47,7 +47,7 @@ end
     ρ0 = qobj_to_jl(ψ0,true);
     e_ops_j = qobj_to_jl.(e_ops)
 
-    for backend = (:CPU,:CUDA)
+    @testset "backend $backend" for backend = (:CPU, :CUDA)
         sol, sv = mesolve(H,J,ρ0,ts;backend=backend,saveddata=:full)
         @test all([s ≈ q.full() for (s,q) in zip(sv.saveval,sol_qt.states)])
 
