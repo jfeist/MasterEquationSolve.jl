@@ -2,6 +2,7 @@ using MasterEquationSolve
 using MasterEquationSolve: qt, qobj_to_jl, mesolve, mesolve_qutip, myqload
 using Printf
 using Test
+import CUDA
 
 # make the destroy operators in a tensor product space of dimensions dims
 function destroy_ops(dims)
@@ -47,7 +48,8 @@ end
     ρ0 = qobj_to_jl(ψ0,true);
     e_ops_j = qobj_to_jl.(e_ops)
 
-    @testset "backend $backend" for backend = (:CPU, :CUDA)
+    backends = CUDA.functional() ? (:CPU, :CUDA) : (:CPU,)
+    @testset "backend $backend" for backend in backends
         sol, sv = mesolve(H,J,ρ0,ts;backend=backend,saveddata=:full)
         @test all([s ≈ q.full() for (s,q) in zip(sv.saveval,sol_qt.states)])
 
