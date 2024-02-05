@@ -5,7 +5,19 @@ using OrdinaryDiffEq, DiffEqCallbacks
 export mesolve, mesolve_qutip, sesolve, sesolve_qutip
 
 "calculate -i Heff = -i * (H - i/2*∑_i c_i^† c_i)"
-get_miHeff(H,J) = -1im*(H - 0.5im*sum(j'*j for j in J))
+get_miHeff(H,J) = begin
+    Heff = H
+    if !isempty(J)
+        Heff -= 0.5im*sum(j'*j for j in J)
+    end
+    -1im*Heff
+end
+get_miHeff(H,J,J_offdiag::Nothing) = get_miHeff(H,J)
+get_miHeff(H,J,J_offdiag) = begin
+    (γ, Fs) = J_offdiag
+    # 0.5 is -i * -i/2
+    get_miHeff(H,J) - 0.5*sum(γ[i,j] * Fs[j]' * Fs[i] for i in eachindex(Fs), j in eachindex(Fs))
+end
 
 mutable struct qutip_saver{T}
     saver::T
@@ -57,9 +69,13 @@ function get_savingcallback_se(saveat, saveddata=:probabilities, outdir=nothing)
     SavingCallback(saver, sv, saveat=saveat)
 end
 
-function setup(H,J,ρ0,ts,saveddata; backend, assume_herm=false)
-    miHeff = get_miHeff(H,J)
-    Lrefill = sum(kron.(conj.(J),J))
+function setup(H,J,ρ0,ts,J_offdiag,saveddata; backend, assume_herm=false)
+    miHeff = get_miHeff(H,J,J_offdiag)
+    Lrefill = isempty(J) ? kron(0*miHeff, 0*miHeff) : sum(kron.(conj.(J),J))
+    if J_offdiag !== nothing
+        (γ, Fs) = J_offdiag
+        Lrefill += sum(kron(γ[i,j] * Fs[j]', Fs[i]) for i in eachindex(Fs), j in eachindex(Fs))
+    end
     if backend == :CUDA
         miHeffc = CuSparseMatrixCSR(miHeff)
         Lrefillc = CuSparseMatrixCSR(Lrefill)
@@ -80,8 +96,8 @@ function setup(H,J,ρ0,ts,saveddata; backend, assume_herm=false)
     end
 end
 
-function mesolve(H, J, ρ0, ts; backend=:CUDA, saveddata=:probabilities, outdir=nothing, reltol=1e-10, abstol=1e-12)
-    (ρ0,ts,ps,saveddata) = setup(H,J,ρ0,ts,saveddata; backend=backend)
+function mesolve(H, J, ρ0, ts, J_offdiag=nothing; backend=:CUDA, saveddata=:probabilities, outdir=nothing, reltol=1e-10, abstol=1e-12)
+    (ρ0,ts,ps,saveddata) = setup(H,J,ρ0,ts,J_offdiag,saveddata; backend=backend)
     tspan = (ts[1],ts[end])
     cb = get_savingcallback(ts, saveddata, outdir)
     sv = cb.affect!.saved_values

@@ -40,13 +40,26 @@ function load_input_from_qutip(filename)
     e_ops_q = pop!(data,"e_ops")
     reltol = pop!(data,"reltol",1e-10)
     abstol = pop!(data,"abstol",1e-12)
+    c_ops_offdiag_q = pop!(data,"c_ops_offdiag",nothing)
     @assert isempty(data)
 
     saveddata = e_ops_q isa String ? Symbol(e_ops_q) : qobj_to_jl.(e_ops_q)
     H = qobj_to_jl(H_q)
     J = qobj_to_jl.(c_ops_q)
     ρ0 = qobj_to_jl(ρ0_q,true)
-    (H,J,ρ0,ts), saveddata, reltol, abstol
+    J_offdiag = if c_ops_offdiag_q === nothing
+        nothing
+    else
+        length(c_ops_offdiag_q)==2 || error("length of c_ops_offdiag must be 2, got $(length(c_ops_offdiag_q))")
+        γ = collect(c_ops_offdiag_q[1])
+        @show γ
+        Fs = qobj_to_jl.(c_ops_offdiag_q[2])
+        @show Fs
+        @show size(γ), size(Fs)
+        @assert size(γ) == (size(Fs)..., size(Fs)...)
+        (γ, Fs)
+    end
+    (H,J,ρ0,ts,J_offdiag), saveddata, reltol, abstol
 end
 
 function load_se_input_from_qutip(filename)
