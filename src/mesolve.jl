@@ -74,7 +74,7 @@ function setup(H,J,ρ0,ts,J_offdiag,saveddata; backend, assume_herm=false)
     Lrefill = isempty(J) ? kron(0*miHeff, 0*miHeff) : sum(kron.(conj.(J),J))
     if J_offdiag !== nothing
         (γ, Fs) = J_offdiag
-        Lrefill += sum(kron(γ[i,j] * Fs[j]', Fs[i]) for i in eachindex(Fs), j in eachindex(Fs))
+        Lrefill += sum(kron(γ[i,j] * conj(Fs[j]), Fs[i]) for i in eachindex(Fs), j in eachindex(Fs))
     end
     if backend == :CUDA
         miHeffc = CuSparseMatrixCSR(miHeff)
