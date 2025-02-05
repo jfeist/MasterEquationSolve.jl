@@ -116,20 +116,23 @@ function mesolve_qutip(infile, outdir; backend=:CUDA, saveddata=nothing)
     mesolve(input...; backend, saveddata, outdir, reltol, abstol)
 end
 
-miH!(miHψ,ψ,miH,t) = mul!(miHψ,miH,ψ)
+function miH!(miHψ,ψ,ps,t)
+    miH, = ps
+    mul!(miHψ,miH,ψ)
+end
 
 function setup_se(H,ψ0,ts,saveddata; backend)
     miH = -1im*H
     if backend == :CUDA
         miHc = CuSparseMatrixCSR(miH)
         ψc = CuArray(ψ0)
-        ps = miHc
+        ps = (miHc,) # make this a 1-element tuple since DifferentialEquations tries to index it
         if saveddata isa AbstractVector
             saveddata = CuSparseMatrixCSR.(saveddata)
         end
         return ψc, ts, ps, saveddata
     elseif backend == :CPU
-        ps = miH
+        ps = (miH,) # make this a 1-element tuple since DifferentialEquations tries to index it
         return ψ0, ts, ps, saveddata
     else
         throw(ArgumentError("Unknown backend $backend."))
