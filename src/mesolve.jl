@@ -1,6 +1,6 @@
 using Printf
 # use only the DifferentialEquations sublibraries we actually need
-using OrdinaryDiffEq, DiffEqCallbacks
+using OrdinaryDiffEqTsit5, DiffEqCallbacks
 
 export mesolve, mesolve_qutip, sesolve, sesolve_qutip
 
