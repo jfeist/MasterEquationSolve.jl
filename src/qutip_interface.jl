@@ -9,7 +9,7 @@ end
 
 function qobj_to_jl(A,getρ=false)
     if A."type" == "oper"
-        return getρ ? A.full() : pysparse_to_julia(A.data)
+        return getρ ? A.full() : pysparse_to_julia(A.data.as_scipy())
     elseif A."type" == "ket"
         ψ = reshape(A.full(),:)
         return getρ ? ψ * ψ' : ψ
